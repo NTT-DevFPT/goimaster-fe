@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GoiMaster</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              jp: ['Noto Sans JP', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                50: '#eef2ff',
+                100: '#e0e7ff',
+                500: '#6366f1', // Indigo 500
+                600: '#4f46e5', // Indigo 600
+                700: '#4338ca', // Indigo 700
+                900: '#312e81',
+              },
+              accent: {
+                500: '#a855f7', // Purple
+                600: '#9333ea',
+              }
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-out',
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc;
+      }
+      .font-jp {
+        font-family: 'Noto Sans JP', sans-serif;
+      }
+      /* Hide scrollbar for clean UI */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* 3D Flip Utilities */
+      .perspective-1000 {
+        perspective: 1000px;
+      }
+      .transform-style-3d {
+        transform-style: preserve-3d;
+      }
+      .backface-hidden {
+        backface-visibility: hidden;
+      }
+      .rotate-y-180 {
+        transform: rotateY(180deg);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.24",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+    "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.0",
+    "clsx": "https://aistudiocdn.com/clsx@^2.1.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
