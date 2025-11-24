@@ -11,6 +11,127 @@ const shuffle = <T,>(array: T[]): T[] => {
     return [...array].sort(() => Math.random() - 0.5);
 };
 
+// Levenshtein Distance - calculates similarity between two strings
+const levenshteinDistance = (str1: string, str2: string): number => {
+    const len1 = str1.length;
+    const len2 = str2.length;
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= len1; i++) {
+        matrix[i] = [i];
+    }
+    for (let j = 0; j <= len2; j++) {
+        matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= len1; i++) {
+        for (let j = 1; j <= len2; j++) {
+            const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j] + 1,      // deletion
+                matrix[i][j - 1] + 1,      // insertion
+                matrix[i - 1][j - 1] + cost // substitution
+            );
+        }
+    }
+    return matrix[len1][len2];
+};
+
+// Calculate similarity score (0-1, higher is more similar)
+const calculateSimilarity = (str1: string, str2: string): number => {
+    const maxLen = Math.max(str1.length, str2.length);
+    if (maxLen === 0) return 1;
+    const distance = levenshteinDistance(str1, str2);
+    return 1 - distance / maxLen;
+};
+
+// Detect if word is a する verb
+const isSuruVerb = (word: Word): boolean => {
+    return word.furigana.endsWith('する') || word.furigana.endsWith('スル');
+};
+
+// Detect if word is an い-adjective
+const isIAdjective = (word: Word): boolean => {
+    const furigana = word.furigana;
+    return furigana.endsWith('い') &&
+        !furigana.endsWith('ない') &&
+        !furigana.endsWith('たい');
+};
+
+// Detect if word is a な-adjective
+const isNaAdjective = (word: Word): boolean => {
+    // Often marked in dictionary form
+    return word.meaning.includes('(na-adj)') || word.meaning.includes('な形容詞');
+};
+
+// Get word grammatical pattern
+const getWordPattern = (word: Word): string => {
+    if (isSuruVerb(word)) return 'suru-verb';
+    if (isIAdjective(word)) return 'i-adjective';
+    if (isNaAdjective(word)) return 'na-adjective';
+    return 'other';
+};
+
+// Get smart distractors based on similarity AND grammatical pattern
+const getSmartDistractors = (target: Word, allWords: Word[], mode: QuizModeType, count: number = 3): Word[] => {
+    const others = allWords.filter(w => w.id !== target.id);
+
+    if (others.length <= count) {
+        return others;
+    }
+
+    // STEP 1: Filter by grammatical pattern first (CRITICAL for quality)
+    const targetPattern = getWordPattern(target);
+    const samePattern = others.filter(w => getWordPattern(w) === targetPattern);
+
+    // Use same-pattern words if we have enough, otherwise fall back to all
+    const candidatePool = samePattern.length >= count ? samePattern : others;
+
+    // STEP 2: Calculate similarity scores for candidate pool
+    const scored = candidatePool.map(word => {
+        let similarityScore = 0;
+
+        switch (mode) {
+            case QuizModeType.KANJI_TO_FURIGANA:
+                // For furigana mode, find similar sounding words
+                similarityScore = calculateSimilarity(target.furigana, word.furigana);
+                break;
+            case QuizModeType.FURIGANA_TO_MEANING:
+            case QuizModeType.KANJI_TO_MEANING:
+                // For meaning mode, find similar meanings (by length and character overlap)
+                const targetMeaning = target.meaning.toLowerCase();
+                const wordMeaning = word.meaning.toLowerCase();
+                similarityScore = calculateSimilarity(targetMeaning, wordMeaning);
+
+                // Bonus for same length
+                if (Math.abs(target.meaning.length - word.meaning.length) <= 2) {
+                    similarityScore += 0.1;
+                }
+                break;
+            default:
+                similarityScore = Math.random();
+        }
+
+        return { word, score: similarityScore };
+    });
+
+    // Sort by similarity (descending) and take top matches
+    scored.sort((a, b) => b.score - a.score);
+
+    // Take a mix: some very similar, some moderately similar for balance
+    const verySimil = scored.slice(0, Math.min(2, count));
+    const moderateSimilar = scored.slice(Math.min(2, count), Math.min(6, candidatePool.length));
+
+    // Mix them for variety
+    const mixedPool = [...verySimil];
+    while (mixedPool.length < count && moderateSimilar.length > 0) {
+        const randomIndex = Math.floor(Math.random() * moderateSimilar.length);
+        mixedPool.push(moderateSimilar.splice(randomIndex, 1)[0]);
+    }
+
+    return mixedPool.map(item => item.word);
+};
+
 export const QuizSession: React.FC = () => {
     const { lessonId } = useParams<{ lessonId: string }>();
     const navigate = useNavigate();
@@ -143,8 +264,8 @@ export const QuizSession: React.FC = () => {
         const target = words[randomIndex];
         setCurrentWord(target);
 
-        const others = words.filter(w => w.id !== target.id);
-        const distractors = shuffle(others).slice(0, 3);
+        // Use smart distractor selection
+        const distractors = getSmartDistractors(target, words, mode, 3);
         const pool = shuffle([target, ...distractors]);
         setOptions(pool);
     };

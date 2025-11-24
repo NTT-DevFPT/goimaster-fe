@@ -2,23 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../AppContext';
 import { ImportExcel } from '../components/ImportExcel';
-import { Lesson, Group } from '../types';
-import { ArrowLeft, BookOpen, Clock, FileText, Plus, CheckCircle } from 'lucide-react';
-import { apiService } from '../services/api';
+import { Lesson, Group, ExcelRow } from '../types';
+import { ArrowLeft, BookOpen, Clock, FileText, Plus, CheckCircle, Trash2 } from 'lucide-react';
+import { EditNameModal } from '../components/EditNameModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export const GroupDetail: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
-  const { groups, getLessons, createLesson, addWordsToLesson } = useApp();
+  const { groups, getLessons, createLesson } = useApp();
   const [group, setGroup] = useState<Group | undefined>(undefined);
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  
+
   // Create Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newLessonName, setNewLessonName] = useState('');
-  const [importedData, setImportedData] = useState<any[]>([]);
+  const [importedData, setImportedData] = useState<ExcelRow[]>([]);
   const [creatingLesson, setCreatingLesson] = useState(false);
   const [creationSuccess, setCreationSuccess] = useState<{ id: string; name: string } | null>(null);
+
+  const handleRemoveImportedWord = (index: number) => {
+    setImportedData(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleClearImportedWords = () => {
+    setImportedData([]);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -39,15 +48,14 @@ export const GroupDetail: React.FC = () => {
     if (groupId && newLessonName.trim()) {
       setCreatingLesson(true);
       try {
-        const lesson = await createLesson(groupId, newLessonName.trim());
-        if (importedData.length > 0) {
-          await addWordsToLesson(lesson.id, importedData.map(row => ({
+        const lesson = await createLesson(groupId, newLessonName.trim(), {
+          words: importedData.map(row => ({
             kanji: row.kanji,
             hanViet: row.hanViet || '',
             furigana: row.furigana || '',
             meaning: row.meaning
-          })));
-        }
+          }))
+        });
         const lessonsData = await getLessons(groupId);
         setLessons(lessonsData);
         setNewLessonName('');
@@ -74,7 +82,7 @@ export const GroupDetail: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">{group.name}</h1>
           <p className="text-gray-500">{lessons.length} lessons available</p>
         </div>
-        <button 
+        <button
           onClick={() => {
             setCreationSuccess(null);
             setImportedData([]);
@@ -90,7 +98,7 @@ export const GroupDetail: React.FC = () => {
 
       <div className="space-y-4">
         {lessons.map((lesson) => (
-          <Link 
+          <Link
             key={lesson.id}
             to={`/lesson/${lesson.id}`}
             className="block bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-md hover:border-brand-200 transition-all"
@@ -126,8 +134,8 @@ export const GroupDetail: React.FC = () => {
         )}
       </div>
 
-       {/* Create Lesson Modal */}
-       {isModalOpen && (
+      {/* Create Lesson Modal */}
+      {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Add New Lesson</h2>
@@ -182,15 +190,67 @@ export const GroupDetail: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Import Words (Excel)</label>
                 <ImportExcel onImport={(data) => setImportedData(data)} />
                 {importedData.length > 0 && (
-                  <p className="text-sm text-green-600 mt-2 font-medium">
-                    Ready to add {importedData.length} words to this lesson.
-                  </p>
+                  <div className="mt-4 border border-gray-200 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">
+                          Preview {importedData.length} imported word{importedData.length > 1 ? 's' : ''}
+                        </p>
+                        <p className="text-xs text-gray-500">Double-check before creating the lesson</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearImportedWords}
+                        className="text-xs font-medium text-gray-500 hover:text-gray-700"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto bg-white">
+                      <table className="min-w-full text-sm">
+                        <thead className="sticky top-0 bg-white shadow-sm">
+                          <tr className="text-left text-gray-500 uppercase text-xs tracking-wide">
+                            <th className="px-3 py-2 w-10">#</th>
+                            <th className="px-3 py-2 font-jp">漢字</th>
+                            <th className="px-3 py-2">Hán Việt</th>
+                            <th className="px-3 py-2 font-jp">読み方</th>
+                            <th className="px-3 py-2 font-jp">意味</th>
+                            <th className="px-3 py-2 w-12 text-center"> </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importedData.map((row, index) => (
+                            <tr
+                              key={`${row.kanji}-${row.meaning}-${index}`}
+                              className="border-t border-gray-100 text-gray-700"
+                            >
+                              <td className="px-3 py-2 text-xs text-gray-400">{index + 1}</td>
+                              <td className="px-3 py-2 font-medium font-jp">{row.kanji}</td>
+                              <td className="px-3 py-2">{row.hanViet || <span className="text-gray-400">—</span>}</td>
+                              <td className="px-3 py-2 font-jp">{row.furigana || <span className="text-gray-400">—</span>}</td>
+                              <td className="px-3 py-2 text-gray-600">{row.meaning}</td>
+                              <td className="px-3 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveImportedWord(index)}
+                                  className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                  aria-label="Remove word"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 )}
               </div>
 
               <div className="flex justify-end gap-3">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => {
                     setIsModalOpen(false);
                     setCreationSuccess(null);
@@ -199,8 +259,8 @@ export const GroupDetail: React.FC = () => {
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={creatingLesson}
                   className="px-6 py-2 bg-brand-600 text-white font-medium rounded-lg hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 >

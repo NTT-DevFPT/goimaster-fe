@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../AppContext';
 import { Lesson, Word, QuizSessionResult, QuizSessionDetail } from '../types';
-import { ArrowLeft, Layers, BrainCircuit, History, Trophy } from 'lucide-react';
+import { ArrowLeft, Layers, BrainCircuit, History, Trophy, Edit2, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { apiService } from '../services/api';
 import { SessionDetailModal } from '../components/SessionDetailModal';
+import { EditWordModal } from '../components/EditWordModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export const LessonDetail: React.FC = () => {
   const { lessonId } = useParams<{ lessonId: string }>();
@@ -16,6 +18,10 @@ export const LessonDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<QuizSessionResult | null>(null);
   const [sessionDetails, setSessionDetails] = useState<QuizSessionDetail[]>([]);
+
+  // Edit/Delete state
+  const [editingWord, setEditingWord] = useState<Word | null>(null);
+  const [deletingWord, setDeletingWord] = useState<Word | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -39,6 +45,34 @@ export const LessonDetail: React.FC = () => {
     };
     loadData();
   }, [lessonId, getHistory]);
+
+  const handleEditWord = async (wordData: { kanji: string; hanViet: string; furigana: string; meaning: string }) => {
+    if (!editingWord) return;
+    try {
+      await apiService.updateWord(editingWord.id, wordData);
+      // Refresh words
+      const updatedWords = await apiService.getWords(lessonId!);
+      setWords(updatedWords);
+      setEditingWord(null);
+    } catch (error) {
+      console.error('Failed to update word:', error);
+      alert('Failed to update word. Please try again.');
+    }
+  };
+
+  const handleDeleteWord = async () => {
+    if (!deletingWord || !lessonId) return;
+    try {
+      await apiService.deleteWord(deletingWord.id);
+      // Refresh words
+      const updatedWords = await apiService.getWords(lessonId);
+      setWords(updatedWords);
+      setDeletingWord(null);
+    } catch (error) {
+      console.error('Failed to delete word:', error);
+      alert('Failed to delete word. Please try again.');
+    }
+  };
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (!lesson) return <div className="p-8 text-center text-red-500">Lesson not found</div>;
@@ -111,6 +145,7 @@ export const LessonDetail: React.FC = () => {
                     <th className="p-4 font-medium text-gray-500 text-sm">Kanji</th>
                     <th className="p-4 font-medium text-gray-500 text-sm">Furigana</th>
                     <th className="p-4 font-medium text-gray-500 text-sm">Meaning</th>
+                    <th className="p-4 font-medium text-gray-500 text-sm w-24">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -119,6 +154,24 @@ export const LessonDetail: React.FC = () => {
                       <td className="p-4 font-jp text-lg">{word.kanji}</td>
                       <td className="p-4 text-gray-600">{word.furigana}</td>
                       <td className="p-4 text-gray-800 font-medium">{word.meaning}</td>
+                      <td className="p-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setEditingWord(word)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit word"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingWord(word)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete word"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

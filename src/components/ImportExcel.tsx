@@ -15,18 +15,18 @@ const mapExcelRow = (row: any): ExcelRow | null => {
     furigana: '',
     meaning: '',
   };
-  
+
   // Get all column names from the row
   const columnNames = Object.keys(row);
-  
+
   // Map each column based on name
   for (const colName of columnNames) {
     const value = String(row[colName] || '').trim();
     if (!value) continue;
-    
+
     const colLower = colName.toLowerCase().trim();
     const colOriginal = colName.trim();
-    
+
     // Map Kanji (漢字)
     if (colOriginal === '漢字' || colLower === 'kanji' || colLower.includes('kanji')) {
       result.kanji = value;
@@ -44,12 +44,18 @@ const mapExcelRow = (row: any): ExcelRow | null => {
       result.meaning = value;
     }
   }
-  
+
+
   // Validate required fields - Kanji and Meaning are required
+  // HanViet and Furigana can be empty strings
   if (!result.kanji || !result.meaning) {
     return null; // Skip invalid rows
   }
-  
+
+  // Ensure hanViet and furigana are strings (not undefined)
+  result.hanViet = result.hanViet || '';
+  result.furigana = result.furigana || '';
+
   return result as ExcelRow;
 };
 
@@ -72,7 +78,7 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      
+
       // Parse with header row
       const jsonData = XLSX.utils.sheet_to_json<any>(worksheet, {
         defval: '', // Default value for empty cells
@@ -83,16 +89,16 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
       if (jsonData.length === 0) {
         throw new Error("File is empty or has no data rows");
       }
-      
+
       // Show detected columns for debugging
       const firstRow = jsonData[0];
       const detectedColumns = Object.keys(firstRow);
       console.log('Detected columns:', detectedColumns);
-      
+
       // Map and validate rows
       const mappedData: ExcelRow[] = [];
       const skippedRows: number[] = [];
-      
+
       jsonData.forEach((row, index) => {
         const mapped = mapExcelRow(row);
         if (mapped) {
@@ -112,7 +118,7 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
       }
 
       onImport(mappedData);
-      
+
       const skippedMsg = skippedRows.length > 0
         ? ` ${skippedRows.length} row(s) skipped (rows: ${skippedRows.slice(0, 5).join(', ')}${skippedRows.length > 5 ? '...' : ''}).`
         : '';
@@ -129,15 +135,15 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
 
   return (
     <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-white hover:border-brand-300 transition-colors cursor-pointer group"
-         onClick={() => fileInputRef.current?.click()}>
-      <input 
-        type="file" 
-        accept=".xlsx, .xls" 
-        className="hidden" 
-        ref={fileInputRef} 
+      onClick={() => fileInputRef.current?.click()}>
+      <input
+        type="file"
+        accept=".xlsx, .xls"
+        className="hidden"
+        ref={fileInputRef}
         onChange={handleFileChange}
       />
-      
+
       {loading ? (
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mb-2"></div>
       ) : success ? (
@@ -152,9 +158,9 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
       <div className="text-sm text-gray-500 mt-1 space-y-1 w-full">
         <p>Supported columns:</p>
         <p className="font-jp">
-          <span className="font-semibold">漢字</span> (Kanji) • 
-          <span className="font-semibold"> 読み方</span> (Furigana) • 
-          Hán Việt • 
+          <span className="font-semibold">漢字</span> (Kanji) •
+          <span className="font-semibold"> 読み方</span> (Furigana) •
+          Hán Việt •
           <span className="font-semibold"> 意味</span> (Meaning)
         </p>
         <p className="text-xs text-gray-400">
@@ -184,7 +190,7 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
           </div>
         </div>
       </div>
-      
+
       {error && <p className="text-sm text-red-500 mt-2 max-w-md px-2">{error}</p>}
       {success && <p className="text-sm text-green-500 mt-2 px-2">{success}</p>}
     </div>

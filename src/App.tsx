@@ -7,6 +7,8 @@ import { GroupDetail } from './pages/GroupDetail';
 import { LessonDetail } from './pages/LessonDetail';
 import { FlashcardSession } from './pages/FlashcardSession';
 import { QuizSession } from './pages/QuizSession';
+import { MyVocabulary } from './pages/MyVocabulary';
+import { AdminVocabulary } from './pages/AdminVocabulary';
 import { Auth } from './pages/Auth';
 
 const AppContent: React.FC = () => {
@@ -50,27 +52,29 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <HashRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/group/:groupId" element={<GroupDetail />} />
-          <Route path="/lesson/:lessonId" element={<LessonDetail />} />
-          <Route path="/lesson/:lessonId/flashcards" element={<FlashcardSession />} />
-          <Route path="/lesson/:lessonId/quiz" element={<QuizSession />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
-    </HashRouter>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/group/:groupId" element={<GroupDetail />} />
+        <Route path="/lesson/:lessonId" element={<LessonDetail />} />
+        <Route path="/lesson/:lessonId/flashcards" element={<FlashcardSession />} />
+        <Route path="/lesson/:lessonId/quiz" element={<QuizSession />} />
+        <Route path="/my-vocabulary" element={<MyVocabulary />} />
+        <Route path="/admin/vocabulary" element={<AdminVocabulary />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
   );
 };
 
-const App: React.FC = () => {
+function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <HashRouter>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </HashRouter>
   );
-};
+}
 
 export default App;

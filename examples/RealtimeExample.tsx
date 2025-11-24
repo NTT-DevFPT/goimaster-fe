@@ -140,3 +140,5 @@ export const RealtimeWordsExample: React.FC<{ lessonId: string }> = ({ lessonId 
   return <div>Words in lesson: {wordCount}</div>;
 };
 
+
+
