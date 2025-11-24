@@ -94,11 +94,27 @@ class ApiService {
     return response.data;
   }
 
-  async createLesson(groupId: string, name: string, orderIndex?: number): Promise<Lesson> {
-    const response = await this.client.post<Lesson>(`/groups/${groupId}/lessons`, {
+  async createLesson(
+    groupId: string,
+    name: string,
+    orderIndex?: number,
+    words?: Omit<Word, 'id' | 'lessonId'>[]
+  ): Promise<Lesson> {
+    const payload: any = {
       name,
-      orderIndex: orderIndex || 0,
-    });
+      orderIndex: orderIndex ?? 0,
+    };
+
+    if (words && words.length > 0) {
+      payload.words = words.map((word) => ({
+        kanji: word.kanji,
+        hanViet: word.hanViet ?? '',
+        furigana: word.furigana ?? '',
+        meaning: word.meaning,
+      }));
+    }
+
+    const response = await this.client.post<Lesson>(`/groups/${groupId}/lessons`, payload);
     return response.data;
   }
 
@@ -235,6 +251,21 @@ class ApiService {
       }
       throw error;
     }
+  }
+
+
+  // Global Vocabulary (Admin only)
+  async getGlobalWords(search?: string): Promise<any[]> {
+    const params = search ? { search } : {};
+    const response = await this.client.get<any[]>('/global-words', { params });
+    return response.data;
+  }
+
+  // Personal Vocabulary (User-specific)
+  async getPersonalWords(search?: string): Promise<any[]> {
+    const params = search ? { search } : {};
+    const response = await this.client.get<any[]>('/personal-words', { params });
+    return response.data;
   }
 
   // Helper to map backend QuizSession to frontend QuizSessionResult

@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Group, Lesson, Word, WordStats, QuizSessionResult, User, StudyStreak } from './types';
 import { supabase } from './config/supabase';
 import { apiService } from './services/api';
 import { API_CONFIG } from './config/api';
+
+type LessonWordPayload = Omit<Word, 'id' | 'lessonId'>;
 
 interface AppContextType {
   user: User | null;
@@ -15,7 +17,11 @@ interface AppContextType {
   refreshGroups: () => Promise<void>;
   getLessons: (groupId: string) => Promise<Lesson[]>;
   createGroup: (name: string, description?: string) => Promise<void>;
-  createLesson: (groupId: string, name: string) => Promise<Lesson>;
+  createLesson: (
+    groupId: string,
+    name: string,
+    options?: { orderIndex?: number; words?: LessonWordPayload[] }
+  ) => Promise<Lesson>;
   addWordsToLesson: (lessonId: string, words: Omit<Word, 'id' | 'lessonId'>[]) => Promise<void>;
   getWords: (lessonId: string) => Promise<Word[]>;
   getStats: (lessonId: string) => Promise<Record<string, WordStats>>;
@@ -26,11 +32,49 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+const AUTO_REFRESH_INTERVAL = 60_000; // 1 minute
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const loadGroups = useCallback(async () => {
+    try {
+      const groupsData = await apiService.getGroups();
+      setGroups(groupsData);
+    } catch (error) {
+      console.error('Failed to load groups:', error);
+      setGroups([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadGroups();
+      }
+    };
+
+    const handleFocus = () => loadGroups();
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadGroups();
+      }
+    }, AUTO_REFRESH_INTERVAL);
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [user, loadGroups]);
 
   // Initialize auth session
   useEffect(() => {
@@ -158,16 +202,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       subscription.unsubscribe();
     };
   }, []);
-
-  const loadGroups = async () => {
-    try {
-      const groupsData = await apiService.getGroups();
-      setGroups(groupsData);
-    } catch (error) {
-      console.error('Failed to load groups:', error);
-      setGroups([]);
-    }
-  };
 
   const login = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -329,9 +363,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
 
-  const refreshGroups = async () => {
+  const refreshGroups = useCallback(async () => {
     await loadGroups();
-  };
+  }, [loadGroups]);
 
   const createGroup = async (name: string, description?: string) => {
     await apiService.createGroup(name, description);
@@ -342,8 +376,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return await apiService.getLessons(groupId);
   };
 
-  const createLesson = async (groupId: string, name: string): Promise<Lesson> => {
-    const lesson = await apiService.createLesson(groupId, name);
+  const createLesson = async (
+    groupId: string,
+    name: string,
+    options?: { orderIndex?: number; words?: LessonWordPayload[] }
+  ): Promise<Lesson> => {
+    const lesson = await apiService.createLesson(
+      groupId,
+      name,
+      options?.orderIndex,
+      options?.words
+    );
     await refreshGroups(); // Refresh to update lesson counts if needed
     return lesson;
   };

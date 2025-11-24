@@ -35,20 +35,35 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <span className="hidden md:inline">Dashboard</span>
           </Link>
 
+          <Link to="/my-vocabulary" className={clsx(
+            "flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-medium",
+            location.pathname === "/my-vocabulary"
+              ? "bg-brand-50 text-brand-700 shadow-sm border border-brand-100"
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+          )}>
+            <BookOpen size={20} />
+            <span className="hidden md:inline">My Vocabulary</span>
+          </Link>
+
+          {/* Admin-only menu */}
+          {user?.email === 'goimaster@gmail.com' && (
+            <Link to="/admin/vocabulary" className={clsx(
+              "flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-medium border",
+              location.pathname === "/admin/vocabulary"
+                ? "bg-red-50 text-red-700 shadow-sm border-red-200"
+                : "text-red-600 hover:bg-red-50 border-red-200"
+            )}>
+              <Settings size={20} />
+              <span className="hidden md:inline">Admin Panel</span>
+            </Link>
+          )}
+
           <div className={clsx(
             "flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-medium cursor-not-allowed opacity-50",
             "text-slate-400"
           )}>
             <BarChart2 size={20} />
             <span className="hidden md:inline">Analytics</span>
-          </div>
-
-          <div className={clsx(
-            "flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-medium cursor-not-allowed opacity-50",
-            "text-slate-400"
-          )}>
-            <Settings size={20} />
-            <span className="hidden md:inline">Settings</span>
           </div>
         </div>
 
@@ -78,14 +93,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          {children}
-        </div>
-        <footer className="mt-12 text-center text-slate-400 text-sm pb-4">
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 p-8 overflow-y-auto">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
+        </main>
+        <footer className="px-8 py-4 text-center text-slate-400 text-sm border-t border-slate-100 bg-white/60 backdrop-blur">
           <p>© {new Date().getFullYear()} GoiMaster. Developed by <a href="https://github.com/NTT-DevFPT" target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700 font-medium transition-colors">NTT-DevFPT</a>.</p>
         </footer>
-      </main>
+      </div>
     </div>
   );
 };
