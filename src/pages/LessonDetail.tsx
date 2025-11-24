@@ -1,34 +1,47 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../AppContext';
-import { Lesson, Word, QuizSessionResult } from '../types';
-import { ArrowLeft, Layers, BrainCircuit, History, Trophy, Clock } from 'lucide-react';
+import { Lesson, Word, QuizSessionResult, QuizSessionDetail } from '../types';
+import { ArrowLeft, Layers, BrainCircuit, History, Trophy } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { apiService } from '../services/api';
+import { SessionDetailModal } from '../components/SessionDetailModal';
 
 export const LessonDetail: React.FC = () => {
   const { lessonId } = useParams<{ lessonId: string }>();
-  const { getLessons, getWords, getHistory } = useApp();
+  const { getHistory } = useApp();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [words, setWords] = useState<Word[]>([]);
   const [history, setHistory] = useState<QuizSessionResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSession, setSelectedSession] = useState<QuizSessionResult | null>(null);
+  const [sessionDetails, setSessionDetails] = useState<QuizSessionDetail[]>([]);
 
   useEffect(() => {
-    if (lessonId) {
-      // Find lesson in all groups (inefficient but works for mock)
-      const allLessons = getLessons("temp"); // The mock ignores ID for getting *all* usually, but let's fix in context if needed. 
-      // Actually, we need to iterate groups or just use localstorage directly in context.
-      // Let's assume context gives us a way or we just filter from localStorage logic. 
-      // Re-fetching logic:
-      const storedLessons = JSON.parse(localStorage.getItem('nihongo_lessons') || '[]');
-      const found = storedLessons.find((l: Lesson) => l.id === lessonId);
-      setLesson(found || null);
+    const loadData = async () => {
+      if (lessonId) {
+        try {
+          setLoading(true);
+          const [lessonData, wordsData, historyData] = await Promise.all([
+            apiService.getLesson(lessonId),
+            apiService.getWords(lessonId),
+            getHistory(lessonId),
+          ]);
+          setLesson(lessonData);
+          setWords(wordsData);
+          setHistory(historyData);
+        } catch (error) {
+          console.error('Failed to load lesson data:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    loadData();
+  }, [lessonId, getHistory]);
 
-      setWords(getWords(lessonId));
-      setHistory(getHistory(lessonId));
-    }
-  }, [lessonId]);
-
-  if (!lesson) return <div>Loading...</div>;
+  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (!lesson) return <div className="p-8 text-center text-red-500">Lesson not found</div>;
 
   // Prepare chart data
   const chartData = history.slice(0, 5).reverse().map((h, i) => ({
@@ -36,6 +49,16 @@ export const LessonDetail: React.FC = () => {
     score: Math.round((h.correctAnswers / (h.totalQuestions || 1)) * 100),
     date: new Date(h.date).toLocaleDateString()
   }));
+
+  const handleSessionClick = async (session: QuizSessionResult) => {
+    try {
+      const fullSession = await apiService.getQuizSession(session.id);
+      setSessionDetails(fullSession.details);
+      setSelectedSession(session);
+    } catch (error) {
+      console.error('Failed to load session details:', error);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -108,24 +131,24 @@ export const LessonDetail: React.FC = () => {
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Trophy className="text-yellow-500" size={20}/> Performance
+              <Trophy className="text-yellow-500" size={20} /> Performance
             </h3>
             {history.length > 0 ? (
-               <div className="h-[200px] w-full">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
-                      <XAxis dataKey="name" hide />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.score > 80 ? '#22c55e' : entry.score > 50 ? '#eab308' : '#ef4444'} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                 </ResponsiveContainer>
-               </div>
+              <div className="h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <XAxis dataKey="name" hide />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.score > 80 ? '#22c55e' : entry.score > 50 ? '#eab308' : '#ef4444'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <p className="text-gray-500 text-sm">No quiz history available yet.</p>
             )}
@@ -133,11 +156,15 @@ export const LessonDetail: React.FC = () => {
 
           <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <History className="text-blue-500" size={20}/> Recent Activity
+              <History className="text-blue-500" size={20} /> Recent Activity
             </h3>
             <div className="space-y-3">
               {history.slice(0, 3).map((h) => (
-                <div key={h.id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0">
+                <div
+                  key={h.id}
+                  onClick={() => handleSessionClick(h)}
+                  className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                >
                   <div>
                     <p className="font-medium text-gray-800">{h.mode}</p>
                     <p className="text-gray-400 text-xs">{new Date(h.date).toLocaleDateString()}</p>
@@ -152,6 +179,14 @@ export const LessonDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {selectedSession && (
+        <SessionDetailModal
+          session={selectedSession}
+          details={sessionDetails}
+          onClose={() => setSelectedSession(null)}
+        />
+      )}
     </div>
   );
 };

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../AppContext';
 import { ImportExcel } from '../components/ImportExcel';
 import { Lesson, Group } from '../types';
-import { ArrowLeft, BookOpen, Clock, FileText, Plus } from 'lucide-react';
-import clsx from 'clsx';
+import { ArrowLeft, BookOpen, Clock, FileText, Plus, CheckCircle } from 'lucide-react';
+import { apiService } from '../services/api';
 
 export const GroupDetail: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
+  const navigate = useNavigate();
   const { groups, getLessons, createLesson, addWordsToLesson } = useApp();
   const [group, setGroup] = useState<Group | undefined>(undefined);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -16,32 +17,48 @@ export const GroupDetail: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newLessonName, setNewLessonName] = useState('');
   const [importedData, setImportedData] = useState<any[]>([]);
+  const [creatingLesson, setCreatingLesson] = useState(false);
+  const [creationSuccess, setCreationSuccess] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
-    if (groupId) {
-      setGroup(groups.find(g => g.id === groupId));
-      setLessons(getLessons(groupId));
-    }
-  }, [groupId, groups]);
+    const loadData = async () => {
+      if (groupId) {
+        const foundGroup = groups.find(g => g.id === groupId);
+        setGroup(foundGroup);
+        if (foundGroup) {
+          const lessonsData = await getLessons(groupId);
+          setLessons(lessonsData);
+        }
+      }
+    };
+    loadData();
+  }, [groupId, groups, getLessons]);
 
-  const handleCreateLesson = (e: React.FormEvent) => {
+  const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     if (groupId && newLessonName.trim()) {
-      const lesson = createLesson(groupId, newLessonName);
-      if (importedData.length > 0) {
-        addWordsToLesson(lesson.id, importedData.map(row => ({
-          kanji: row.kanji,
-          hanViet: row.hanViet || '',
-          furigana: row.furigana || '',
-          meaning: row.meaning
-        })));
+      setCreatingLesson(true);
+      try {
+        const lesson = await createLesson(groupId, newLessonName.trim());
+        if (importedData.length > 0) {
+          await addWordsToLesson(lesson.id, importedData.map(row => ({
+            kanji: row.kanji,
+            hanViet: row.hanViet || '',
+            furigana: row.furigana || '',
+            meaning: row.meaning
+          })));
+        }
+        const lessonsData = await getLessons(groupId);
+        setLessons(lessonsData);
+        setNewLessonName('');
+        setImportedData([]);
+        setCreationSuccess({ id: lesson.id, name: lesson.name });
+      } catch (error) {
+        console.error('Failed to create lesson:', error);
+        alert('Failed to create lesson. Please try again.');
+      } finally {
+        setCreatingLesson(false);
       }
-      setLessons(getLessons(groupId));
-      
-      // Reset
-      setNewLessonName('');
-      setImportedData([]);
-      setIsModalOpen(false);
     }
   };
 
@@ -58,7 +75,12 @@ export const GroupDetail: React.FC = () => {
           <p className="text-gray-500">{lessons.length} lessons available</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setCreationSuccess(null);
+            setImportedData([]);
+            setNewLessonName('');
+            setIsModalOpen(true);
+          }}
           className="ml-auto bg-brand-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-sm hover:bg-brand-700"
         >
           <Plus size={18} />
@@ -109,6 +131,40 @@ export const GroupDetail: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Add New Lesson</h2>
+            {creationSuccess && (
+              <div className="mb-5 p-4 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 mt-0.5 text-emerald-500" />
+                  <div>
+                    <p className="font-semibold">Lesson created successfully</p>
+                    <p className="text-sm text-emerald-600">
+                      "{creationSuccess.name}" is ready. You can open it now or continue adding another lesson.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const lessonId = creationSuccess.id;
+                          setIsModalOpen(false);
+                          setCreationSuccess(null);
+                          navigate(`/lesson/${lessonId}`);
+                        }}
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                      >
+                        Go to lesson
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCreationSuccess(null)}
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                      >
+                        Create another
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <form onSubmit={handleCreateLesson}>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Name</label>
@@ -135,16 +191,20 @@ export const GroupDetail: React.FC = () => {
               <div className="flex justify-end gap-3">
                 <button 
                   type="button" 
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setCreationSuccess(null);
+                  }}
                   className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-100 rounded-lg"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="px-6 py-2 bg-brand-600 text-white font-medium rounded-lg hover:bg-brand-700"
+                  disabled={creatingLesson}
+                  className="px-6 py-2 bg-brand-600 text-white font-medium rounded-lg hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Create Lesson
+                  {creatingLesson ? 'Creating...' : 'Create Lesson'}
                 </button>
               </div>
             </form>

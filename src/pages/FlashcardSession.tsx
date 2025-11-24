@@ -12,10 +12,14 @@ export const FlashcardSession: React.FC = () => {
   const [isFlipped, setIsFlipped] = useState(false);
 
   useEffect(() => {
-    if (lessonId) {
-      setWords(getWords(lessonId));
-    }
-  }, [lessonId]);
+    const loadWords = async () => {
+      if (lessonId) {
+        const wordsData = await getWords(lessonId);
+        setWords(wordsData);
+      }
+    };
+    loadWords();
+  }, [lessonId, getWords]);
 
   if (words.length === 0) return <div className="p-8 text-center text-slate-500">No words in this lesson. Import words first.</div>;
 

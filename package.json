@@ -16,7 +16,9 @@
     "xlsx": "^0.18.5",
     "lucide-react": "^0.554.0",
     "recharts": "^3.5.0",
-    "clsx": "^2.1.1"
+    "clsx": "^2.1.1",
+    "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
