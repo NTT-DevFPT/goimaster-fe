@@ -1,55 +1,163 @@
 import React, { useState } from 'react';
 import { useApp } from '../AppContext';
-import { Languages, ArrowRight, User, Mail, Lock, Loader2 } from 'lucide-react';
+import { Languages, ArrowRight, User, Mail, Lock, Loader2, AlertCircle, MailOpen } from 'lucide-react';
 import clsx from 'clsx';
 
 export const Auth: React.FC = () => {
   const { login, register, loginWithGoogle } = useApp();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  
+  type AlertState = {
+    type: 'error' | 'info';
+    title: string;
+    message: string;
+    emailCTA?: string;
+  };
+  
+  const [alert, setAlert] = useState<AlertState | null>(null);
 
   // Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  const formatAuthError = (err: any, context: 'login' | 'register' | 'google'): AlertState => {
+    if (!err) {
+      return {
+        type: 'error',
+        title: 'Không thể tiếp tục',
+        message: 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.'
+      };
+    }
+
+    let rawMessage = err.message || err.error_description || err.error?.message;
+    const status = err.status ?? err.error?.status ?? err.code;
+    const normalizedMessage = rawMessage?.toLowerCase() || '';
+
+    if (context === 'login') {
+      if (status === 400 || normalizedMessage.includes('invalid login credentials')) {
+        return {
+          type: 'error',
+          title: 'Không thể đăng nhập',
+          message: 'Email hoặc mật khẩu chưa chính xác. Kiểm tra lại và thử lần nữa.'
+        };
+      }
+      if (status === 429) {
+        return {
+          type: 'error',
+          title: 'Tạm thời bị khóa',
+          message: 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng đợi vài phút rồi thử lại.'
+        };
+      }
+    }
+
+    if (context === 'register') {
+      if (rawMessage === 'FULL_NAME_REQUIRED') {
+        return {
+          type: 'error',
+          title: 'Thiếu họ tên',
+          message: 'Vui lòng nhập đầy đủ họ và tên trước khi đăng ký.'
+        };
+      }
+      if (rawMessage === 'EMAIL_ALREADY_REGISTERED_CONFIRMED') {
+        return {
+          type: 'error',
+          title: 'Email đã tồn tại',
+          message: 'Email này đã được đăng ký và xác thực. Hãy chuyển sang đăng nhập để tiếp tục.'
+        };
+      }
+      if (rawMessage === 'EMAIL_PENDING_CONFIRMATION') {
+        return {
+          type: 'info',
+          title: 'Xác nhận email để hoàn tất',
+          message: 'Một email xác thực đã được gửi tới hộp thư của bạn. Mở email và nhấn “Confirm your mail” để kích hoạt tài khoản. Nhớ kiểm tra cả thư mục Spam/Promotions.',
+          emailCTA: 'Mở hộp thư'
+        };
+      }
+      if (rawMessage === 'EMAIL_ALREADY_REGISTERED') {
+        return {
+          type: 'error',
+          title: 'Email đã tồn tại',
+          message: 'Email này đã có tài khoản. Đăng nhập bằng email này hoặc dùng email khác.'
+        };
+      }
+      if (normalizedMessage.includes('user already registered')) {
+        return {
+          type: 'error',
+          title: 'Email đã tồn tại',
+          message: 'Email này đã được đăng ký. Đăng nhập bằng email này hoặc dùng email khác.'
+        };
+      }
+      if (normalizedMessage.includes('password should be at least')) {
+        return {
+          type: 'error',
+          title: 'Mật khẩu quá yếu',
+          message: 'Mật khẩu quá ngắn. Vui lòng dùng ít nhất 6 ký tự và kết hợp chữ/số.'
+        };
+      }
+    }
+
+    if (context === 'google' && status === 'provider_error') {
+      return {
+        type: 'error',
+        title: 'Google chưa phản hồi',
+        message: 'Không thể đăng nhập bằng Google lúc này. Thử lại sau hoặc kiểm tra pop-up bị chặn.'
+      };
+    }
+
+    if (normalizedMessage.includes('email not confirmed') || normalizedMessage.includes('email confirmation required')) {
+      return {
+        type: 'info',
+        title: 'Cần xác thực email',
+        message: 'Tài khoản chưa xác thực email. Kiểm tra hộp thư hoặc tạm tắt email confirmation trong Supabase khi dev.',
+        emailCTA: 'Mở hộp thư'
+      };
+    }
+
+    return {
+      type: 'error',
+      title: 'Không thể tiếp tục',
+      message: rawMessage || 'Có lỗi xảy ra. Vui lòng thử lại.'
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setAlert(null);
     setLoading(true);
 
     try {
       if (isLogin) {
         await login(email, password);
       } else {
-        if (!name) throw new Error("Name is required");
-        await register(name, email, password);
+        if (!name.trim()) throw new Error('FULL_NAME_REQUIRED');
+        await register(name.trim(), email, password);
       }
     } catch (err: any) {
-      setError(err.message || "Authentication failed");
+      setAlert(formatAuthError(err, isLogin ? 'login' : 'register'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
+    setAlert(null);
     setLoading(true);
     try {
         await loginWithGoogle();
     } catch (err: any) {
-        setError(err.message || "Google login failed");
+        setAlert(formatAuthError(err, 'google'));
         setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[600px] animate-fade-in">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="w-full max-w-6xl bg-white rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[780px] animate-fade-in">
         
         {/* Left Side: Brand & Visual */}
-        <div className="md:w-1/2 bg-gradient-to-br from-brand-600 to-accent-700 p-12 text-white flex flex-col justify-between relative overflow-hidden">
+        <div className="md:w-[48%] bg-gradient-to-br from-brand-600 to-accent-700 p-14 text-white flex flex-col justify-between relative overflow-hidden">
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 -ml-10 -mb-10 w-40 h-40 bg-purple-500 opacity-20 rounded-full blur-2xl"></div>
 
@@ -79,17 +187,58 @@ export const Auth: React.FC = () => {
         </div>
 
         {/* Right Side: Form */}
-        <div className="md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white relative">
-          <div className="max-w-sm mx-auto w-full">
+        <div className="md:w-[52%] p-10 md:p-14 flex flex-col justify-center bg-white relative">
+          <div className="max-w-md mx-auto w-full">
             <h3 className="text-2xl font-bold text-slate-800 mb-1">{isLogin ? "Sign In" : "Create Account"}</h3>
             <p className="text-slate-400 mb-6 text-sm">
               {isLogin ? "Choose your preferred login method" : "Fill in the form below to get started"}
             </p>
 
-            {error && (
-              <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                {error}
+            {alert && (
+              <div className="mb-6 w-full">
+                <div
+                  className={clsx(
+                    'p-5 rounded-2xl shadow-sm flex gap-3 border transition-colors',
+                    alert.type === 'error'
+                      ? 'bg-red-50 border-red-100 text-red-700'
+                      : 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                  )}
+                >
+                  <AlertCircle
+                    className={clsx(
+                      'w-6 h-6 mt-0.5 flex-shrink-0',
+                      alert.type === 'error' ? 'text-red-500' : 'text-emerald-500'
+                    )}
+                  />
+                  <div>
+                    <p
+                      className={clsx(
+                        'font-semibold text-base mb-1',
+                        alert.type === 'error' ? 'text-red-700' : 'text-emerald-700'
+                      )}
+                    >
+                      {alert.title}
+                    </p>
+                    <p
+                      className={clsx(
+                        'text-sm whitespace-pre-line leading-relaxed',
+                        alert.type === 'error' ? 'text-red-600' : 'text-emerald-600'
+                      )}
+                    >
+                      {alert.message}
+                    </p>
+                    {alert.emailCTA && (
+                      <button
+                        type="button"
+                        onClick={() => window.open('https://mail.google.com', '_blank')}
+                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-900"
+                      >
+                        <MailOpen className="w-4 h-4" />
+                        {alert.emailCTA}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -180,7 +329,7 @@ export const Auth: React.FC = () => {
               <p className="text-slate-500 text-sm">
                 {isLogin ? "Don't have an account?" : "Already have an account?"}
                 <button 
-                  onClick={() => { setIsLogin(!isLogin); setError(''); }}
+                  onClick={() => { setIsLogin(!isLogin); setAlert(null); }}
                   className="ml-2 font-bold text-brand-600 hover:text-brand-800 transition-colors"
                 >
                   {isLogin ? "Sign Up" : "Log In"}

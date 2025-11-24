@@ -38,6 +38,18 @@ export interface QuizSessionResult {
   mode: QuizModeType;
 }
 
+export interface QuizSessionDetail {
+  id: string;
+  wordId: string;
+  isCorrect: boolean;
+  kanji?: string;
+  meaning?: string;
+}
+
+export interface QuizSessionFull extends QuizSessionResult {
+  details: QuizSessionDetail[];
+}
+
 export enum QuizModeType {
   KANJI_TO_MEANING = 'kanji_meaning',
   FURIGANA_TO_MEANING = 'furigana_meaning',
@@ -49,7 +61,7 @@ export interface ExcelRow {
   hanViet: string;
   furigana: string;
   meaning: string;
-  [key: string]: string; 
+  [key: string]: string;
 }
 
 export interface User {
@@ -57,4 +69,9 @@ export interface User {
   email: string;
   name: string;
   password?: string; // Only used for verification, usually not stored in frontend state
+}
+
+export interface StudyStreak {
+  currentStreak: number;
+  last7Days: boolean[];
 }
