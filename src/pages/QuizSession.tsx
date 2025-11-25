@@ -345,29 +345,53 @@ export const QuizSession: React.FC = () => {
 
     const renderQuestionText = () => {
         if (!currentWord) return '';
-        switch (mode) {
-            case QuizModeType.KANJI_TO_MEANING: return currentWord.kanji;
-            case QuizModeType.KANJI_TO_FURIGANA: return currentWord.kanji;
-            case QuizModeType.FURIGANA_TO_MEANING: return currentWord.furigana;
-            default: return currentWord.kanji;
-        }
+                    switch (mode) {
+                        case QuizModeType.KANJI_TO_MEANING:
+                        case QuizModeType.KANJI_TO_FURIGANA:
+                            return currentWord.kanji || currentWord.furigana;
+                        case QuizModeType.FURIGANA_TO_MEANING:
+                        case QuizModeType.FURIGANA_TO_KANJI:
+                            return currentWord.furigana;
+                        case QuizModeType.MEANING_TO_KANJI:
+                        case QuizModeType.MEANING_TO_FURIGANA:
+                            return currentWord.meaning;
+                        default:
+                            return currentWord.kanji || currentWord.furigana;
+                    }
     };
 
     const renderQuestionLabel = () => {
         switch (mode) {
-            case QuizModeType.KANJI_TO_MEANING: return "What does this Kanji mean?";
-            case QuizModeType.KANJI_TO_FURIGANA: return "How do you read this?";
-            case QuizModeType.FURIGANA_TO_MEANING: return "What does this word mean?";
-            default: return "";
+            case QuizModeType.KANJI_TO_MEANING:
+                return "What does this Kanji mean?";
+            case QuizModeType.KANJI_TO_FURIGANA:
+                return "How do you read this Kanji?";
+            case QuizModeType.FURIGANA_TO_MEANING:
+                return "What does this word mean?";
+            case QuizModeType.FURIGANA_TO_KANJI:
+                return "Select the correct Kanji for this reading.";
+            case QuizModeType.MEANING_TO_KANJI:
+                return "Which Kanji matches this meaning?";
+            case QuizModeType.MEANING_TO_FURIGANA:
+                return "What is the reading for this meaning?";
+            default:
+                return "";
         }
     }
 
     const renderOptionText = (w: Word) => {
         switch (mode) {
-            case QuizModeType.KANJI_TO_MEANING: return w.meaning;
-            case QuizModeType.KANJI_TO_FURIGANA: return w.furigana;
-            case QuizModeType.FURIGANA_TO_MEANING: return w.meaning;
-            default: return w.meaning;
+            case QuizModeType.KANJI_TO_MEANING:
+            case QuizModeType.FURIGANA_TO_MEANING:
+                return w.meaning;
+            case QuizModeType.KANJI_TO_FURIGANA:
+            case QuizModeType.MEANING_TO_FURIGANA:
+                return w.furigana;
+            case QuizModeType.FURIGANA_TO_KANJI:
+            case QuizModeType.MEANING_TO_KANJI:
+                return w.kanji || w.furigana;
+            default:
+                return w.meaning;
         }
     };
 
@@ -390,8 +414,11 @@ export const QuizSession: React.FC = () => {
                             <div className="space-y-2">
                                 {[
                                     { id: QuizModeType.KANJI_TO_MEANING, label: "Kanji ➔ Meaning", desc: "Read Kanji, find meaning" },
+                                    { id: QuizModeType.KANJI_TO_FURIGANA, label: "Kanji ➔ Furigana", desc: "Read Kanji, find pronunciation" },
+                                    { id: QuizModeType.FURIGANA_TO_KANJI, label: "Furigana ➔ Kanji", desc: "Read Hiragana, find Kanji" },
                                     { id: QuizModeType.FURIGANA_TO_MEANING, label: "Furigana ➔ Meaning", desc: "Read Hiragana, find meaning" },
-                                    { id: QuizModeType.KANJI_TO_FURIGANA, label: "Kanji ➔ Furigana", desc: "Read Kanji, find pronounciation" },
+                                    { id: QuizModeType.MEANING_TO_KANJI, label: "Meaning ➔ Kanji", desc: "Given a meaning, pick the Kanji" },
+                                    { id: QuizModeType.MEANING_TO_FURIGANA, label: "Meaning ➔ Furigana", desc: "Given a meaning, pick the reading" },
                                 ].map((m) => (
                                     <button
                                         key={m.id}
@@ -578,59 +605,15 @@ export const QuizSession: React.FC = () => {
                     </motion.h2>
                 </div>
 
-                {/* Options */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-white">
-                    {options.map((option, idx) => {
-                        const isSelected = selectedOption === option.id;
-                        const isCorrectOption = option.id === currentWord?.id;
-
-                        let btnClass = "p-6 rounded-2xl border-2 text-lg font-medium transition-all text-left relative overflow-hidden group ";
-
-                        if (selectedOption) {
-                            if (isSelected) {
-                                btnClass += isCorrectOption
-                                    ? "bg-green-50 border-green-500 text-green-700"
-                                    : "bg-red-50 border-red-500 text-red-700";
-                            } else if (isCorrectOption) {
-                                btnClass += "bg-green-50 border-green-500 text-green-700 opacity-60";
-                            } else {
-                                btnClass += "bg-slate-50 border-slate-100 text-slate-300";
-                            }
-                        } else {
-                            btnClass += "bg-white border-slate-100 text-slate-700 hover:border-brand-300 hover:shadow-md hover:-translate-y-1";
-                        }
-
-                        return (
-                            <button
-                                key={option.id}
-                                disabled={!!selectedOption}
-                                onClick={() => handleAnswer(option.id)}
-                                className={btnClass}
-                            >
-                                <span className={clsx(
-                                    "inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold mr-3 transition-colors",
-                                    selectedOption
-                                        ? (isSelected && isCorrectOption ? "bg-green-200 text-green-700" : isSelected ? "bg-red-200 text-red-700" : "bg-slate-200 text-slate-500")
-                                        : "bg-slate-100 text-slate-500 group-hover:bg-brand-600 group-hover:text-white"
-                                )}>
-                                    {String.fromCharCode(65 + idx)}
-                                </span>
-                                <span className={clsx("font-jp", selectedOption ? "" : "group-hover:text-brand-700")}>
-                                    {renderOptionText(option)}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                <AnimatePresence>
-                    {selectedOption && currentWord && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            className="border-t border-slate-100 bg-slate-900 text-white p-6 flex flex-col md:flex-row gap-6"
-                        >
+                {/* Options / Result */}
+                {selectedOption && currentWord ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="border-t border-slate-100 bg-slate-900 text-white p-6 flex flex-col gap-6"
+                    >
+                        <div className="flex flex-col md:flex-row gap-6">
                             <div className="flex-1 space-y-2">
                                 <p className="text-xs uppercase tracking-[0.2em] text-white/60 font-semibold">Full Word</p>
                                 <h3 className="text-4xl font-black font-jp">{currentWord.kanji}</h3>
@@ -646,34 +629,75 @@ export const QuizSession: React.FC = () => {
                                     <p className="text-xl font-semibold mt-2 uppercase">{currentWord.hanViet || '—'}</p>
                                 </div>
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {selectedOption && (
-                    <div className="border-t border-slate-100 bg-white px-6 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                        <div className="text-sm text-slate-500">
-                            Next question in{" "}
-                            <span className="font-semibold text-slate-900">
-                                {(nextCountdown ?? autoAdvanceSeconds).toFixed(1)}s
-                            </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {lastAnswerStatus && (
-                                <span className={clsx(
-                                    "px-3 py-1 rounded-full text-xs font-semibold",
-                                    lastAnswerStatus === 'correct' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                )}>
-                                    {lastAnswerStatus === 'correct' ? 'Correct answer' : 'Wrong answer'}
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-t border-white/10 pt-4">
+                            <div className="text-sm text-white/80">
+                                Next question in{" "}
+                                <span className="font-semibold text-white">
+                                    {(nextCountdown ?? autoAdvanceSeconds).toFixed(1)}s
                                 </span>
-                            )}
-                            <button
-                                onClick={goToNextQuestion}
-                                className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-all"
-                            >
-                                Next question
-                            </button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {lastAnswerStatus && (
+                                    <span className={clsx(
+                                        "px-3 py-1 rounded-full text-xs font-semibold",
+                                        lastAnswerStatus === 'correct' ? "bg-green-100/20 text-green-200" : "bg-red-100/20 text-red-200"
+                                    )}>
+                                        {lastAnswerStatus === 'correct' ? 'Correct answer' : 'Wrong answer'}
+                                    </span>
+                                )}
+                                <button
+                                    onClick={goToNextQuestion}
+                                    className="px-4 py-2 rounded-lg bg-white text-slate-900 text-sm font-semibold hover:bg-slate-100 transition-all"
+                                >
+                                    Next question
+                                </button>
+                            </div>
                         </div>
+                    </motion.div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-white">
+                        {options.map((option, idx) => {
+                            const isSelected = selectedOption === option.id;
+                            const isCorrectOption = option.id === currentWord?.id;
+
+                            let btnClass = "p-6 rounded-2xl border-2 text-lg font-medium transition-all text-left relative overflow-hidden group ";
+
+                            if (selectedOption) {
+                                if (isSelected) {
+                                    btnClass += isCorrectOption
+                                        ? "bg-green-50 border-green-500 text-green-700"
+                                        : "bg-red-50 border-red-500 text-red-700";
+                                } else if (isCorrectOption) {
+                                    btnClass += "bg-green-50 border-green-500 text-green-700 opacity-60";
+                                } else {
+                                    btnClass += "bg-slate-50 border-slate-100 text-slate-300";
+                                }
+                            } else {
+                                btnClass += "bg-white border-slate-100 text-slate-700 hover:border-brand-300 hover:shadow-md hover:-translate-y-1";
+                            }
+
+                            return (
+                                <button
+                                    key={option.id}
+                                    disabled={!!selectedOption}
+                                    onClick={() => handleAnswer(option.id)}
+                                    className={btnClass}
+                                >
+                                    <span className={clsx(
+                                        "inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold mr-3 transition-colors",
+                                        selectedOption
+                                            ? (isSelected && isCorrectOption ? "bg-green-200 text-green-700" : isSelected ? "bg-red-200 text-red-700" : "bg-slate-200 text-slate-500")
+                                            : "bg-slate-100 text-slate-500 group-hover:bg-brand-600 group-hover:text-white"
+                                    )}>
+                                        {String.fromCharCode(65 + idx)}
+                                    </span>
+                                    <span className={clsx("font-jp", selectedOption ? "" : "group-hover:text-brand-700")}>
+                                        {renderOptionText(option)}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>

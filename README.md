@@ -17,7 +17,7 @@
     -   **Detailed History**: Track every session and see exactly which words you missed.
 -   **🃏 Flashcards**: Flip cards to memorize efficiently.
 -   **📊 Progress Tracking**: Visual charts and study streaks to keep you motivated.
--   **🔐 Secure Auth**: Powered by Supabase.
+-   **🔐 Secure Auth**: JWT-based authentication with a Spring Boot backend.
 
 ---
 
@@ -29,7 +29,7 @@
 -   **Icons**: [Lucide React](https://lucide.dev/)
 -   **Charts**: [Recharts](https://recharts.org/)
 -   **State/API**: Context API + Axios
--   **Backend Integration**: Supabase (Auth) + Spring Boot (Data)
+-   **Backend Integration**: Spring Boot API
 
 ---
 
@@ -38,7 +38,7 @@
 ```
 src/
 ├── components/       # Reusable UI components (Layout, Modal, etc.)
-├── config/          # Configuration (API, Supabase)
+├── config/          # Configuration (API)
 ├── pages/           # Main application pages (Dashboard, Quiz, etc.)
 ├── services/        # API service layer
 ├── types.ts         # TypeScript definitions
@@ -72,8 +72,6 @@ src/
 3.  **Configure Environment**
     Create a `.env` file in the root directory:
     ```env
-    VITE_SUPABASE_URL=your_supabase_url
-    VITE_SUPABASE_ANON_KEY=your_supabase_key
     VITE_API_BASE_URL=http://localhost:8080/api
     ```
 

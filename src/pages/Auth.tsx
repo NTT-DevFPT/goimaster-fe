@@ -110,7 +110,7 @@ export const Auth: React.FC = () => {
       return {
         type: 'info',
         title: 'Cần xác thực email',
-        message: 'Tài khoản chưa xác thực email. Kiểm tra hộp thư hoặc tạm tắt email confirmation trong Supabase khi dev.',
+        message: 'Tài khoản chưa xác thực email. Hãy kiểm tra hộp thư (kể cả Spam/Promotions) để hoàn tất đăng ký.',
         emailCTA: 'Mở hộp thư'
       };
     }

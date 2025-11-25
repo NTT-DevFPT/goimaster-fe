@@ -36,7 +36,12 @@ const mapExcelRow = (row: any): ExcelRow | null => {
       result.furigana = value;
     }
     // Map Hán Việt
-    else if (colOriginal === 'Hán Việt' || colLower === 'hanviet' || colLower === 'han_viet' || colLower.includes('han viet')) {
+    else if (
+      colOriginal === 'Hán Việt' ||
+      colLower === 'hanviet' ||
+      colLower === 'han_viet' ||
+      colLower.includes('han viet')
+    ) {
       result.hanViet = value;
     }
     // Map Meaning (意味)
@@ -46,9 +51,8 @@ const mapExcelRow = (row: any): ExcelRow | null => {
   }
 
 
-  // Validate required fields - Kanji and Meaning are required
-  // HanViet and Furigana can be empty strings
-  if (!result.kanji || !result.meaning) {
+  // Validate required fields - Furigana và Meaning là bắt buộc
+  if (!result.furigana || !result.meaning) {
     return null; // Skip invalid rows
   }
 
@@ -113,7 +117,7 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
           `No valid rows found. ` +
           `Detected columns: ${detectedColumns.join(', ')}. ` +
           `Expected columns: 漢字 , 読み方 , Hán Việt, 意味 . ` +
-          `Note: Kanji and Meaning are required.`
+          `Note: Furigana (読み方) và Meaning (意味) là bắt buộc. Kanji & Hán Việt có thể để trống.`
         );
       }
 
@@ -134,8 +138,11 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
   };
 
   return (
-    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-white hover:border-brand-300 transition-colors cursor-pointer group"
-      onClick={() => fileInputRef.current?.click()}>
+    <button
+      type="button"
+      onClick={() => fileInputRef.current?.click()}
+      className="w-full border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-white hover:border-brand-300 transition-colors group focus:outline-none"
+    >
       <input
         type="file"
         accept=".xlsx, .xls"
@@ -156,15 +163,11 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
 
       <h3 className="font-medium text-gray-700">Import Excel File</h3>
       <div className="text-sm text-gray-500 mt-1 space-y-1 w-full">
-        <p>Supported columns:</p>
-        <p className="font-jp">
-          <span className="font-semibold">漢字</span> (Kanji) •
-          <span className="font-semibold"> 読み方</span> (Furigana) •
-          Hán Việt •
-          <span className="font-semibold"> 意味</span> (Meaning)
+        <p className="font-jp text-lg font-semibold tracking-wide">
+          漢字 ・ Hán Việt ・ 読み方 ・ 意味
         </p>
         <p className="text-xs text-gray-400">
-          Kanji and Meaning are required
+          Furigana (読み方) và Meaning (意味) là bắt buộc. Kanji & Hán Việt có thể để trống.
         </p>
         <div className="mt-3 w-full text-left">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ví dụ bảng Excel</p>
@@ -193,6 +196,6 @@ export const ImportExcel: React.FC<ImportExcelProps> = ({ onImport }) => {
 
       {error && <p className="text-sm text-red-500 mt-2 max-w-md px-2">{error}</p>}
       {success && <p className="text-sm text-green-500 mt-2 px-2">{success}</p>}
-    </div>
+    </button>
   );
 };
