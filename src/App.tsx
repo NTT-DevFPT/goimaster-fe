@@ -18,8 +18,6 @@ const AppContent: React.FC = () => {
 
   // Check for required environment variables
   const missingEnvVars = [];
-  if (!import.meta.env.VITE_SUPABASE_URL) missingEnvVars.push('VITE_SUPABASE_URL');
-  if (!import.meta.env.VITE_SUPABASE_ANON_KEY) missingEnvVars.push('VITE_SUPABASE_ANON_KEY');
   if (!import.meta.env.VITE_API_BASE_URL) missingEnvVars.push('VITE_API_BASE_URL');
 
   if (missingEnvVars.length > 0) {

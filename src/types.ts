@@ -52,8 +52,11 @@ export interface QuizSessionFull extends QuizSessionResult {
 
 export enum QuizModeType {
   KANJI_TO_MEANING = 'kanji_meaning',
-  FURIGANA_TO_MEANING = 'furigana_meaning',
   KANJI_TO_FURIGANA = 'kanji_furigana',
+  FURIGANA_TO_MEANING = 'furigana_meaning',
+  FURIGANA_TO_KANJI = 'furigana_kanji',
+  MEANING_TO_KANJI = 'meaning_kanji',
+  MEANING_TO_FURIGANA = 'meaning_furigana',
 }
 
 export interface ExcelRow {

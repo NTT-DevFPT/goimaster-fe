@@ -1,7 +1,9 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { API_CONFIG } from '../config/api';
-import { supabase } from '../config/supabase';
 import { Group, Lesson, Word, QuizSessionResult, QuizSessionFull, WordStats, QuizModeType, StudyStreak } from '../types';
+
+const TOKEN_KEY = 'goimaster_token';
+const USER_KEY = 'goimaster_user';
 
 class ApiService {
   private client: AxiosInstance;
@@ -15,24 +17,25 @@ class ApiService {
     });
 
     // Add auth interceptor
-    this.client.interceptors.request.use(async (config) => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-          throw new Error('Failed to get session: ' + error.message);
-        }
-        if (session?.access_token && session.user?.id) {
-          config.headers.Authorization = `Bearer ${session.access_token}`;
-          config.headers['X-User-Id'] = session.user.id;
-        } else {
-          console.warn('No active session found. API calls may fail.');
-          throw new Error('No active session. Please log in.');
-        }
-      } catch (error) {
-        console.error('Error in request interceptor:', error);
-        throw error;
+    this.client.interceptors.request.use((config) => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const user = localStorage.getItem(USER_KEY);
+      
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
+      
+      if (user) {
+        try {
+          const userData = JSON.parse(user);
+          if (userData.id) {
+            config.headers['X-User-Id'] = userData.id;
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+      
       return config;
     });
 
@@ -43,15 +46,15 @@ class ApiService {
         if (error.response?.status === 401) {
           // Handle unauthorized - token invalid or expired
           console.error('Unauthorized. Redirecting to login...');
-          supabase.auth.signOut();
-          localStorage.clear();
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
           sessionStorage.clear();
           window.location.href = '/#/auth';
         } else if (error.response?.status === 403) {
           // Handle forbidden - user not found or deleted
           console.error('Forbidden - User account does not exist or has been deleted');
-          supabase.auth.signOut();
-          localStorage.clear();
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
           sessionStorage.clear();
           window.location.href = '/#/auth';
         } else if (error.response?.status === 400) {
@@ -61,6 +64,36 @@ class ApiService {
         return Promise.reject(error);
       }
     );
+  }
+
+  // Token management
+  setToken(token: string) {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  setUser(user: { id: string; email: string; name: string }) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+  getUser(): { id: string; email: string; name: string } | null {
+    const userStr = localStorage.getItem(USER_KEY);
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  clearAuth() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   }
 
   // Groups API
@@ -236,6 +269,23 @@ class ApiService {
   }
 
   // Auth API
+  async login(email: string, password: string): Promise<{ user: { id: string; email: string; name: string }; token: string }> {
+    const response = await this.client.post<{ user: { id: string; email: string; name: string }; token: string }>('/auth/login', {
+      email,
+      password,
+    });
+    return response.data;
+  }
+
+  async register(name: string, email: string, password: string): Promise<{ user: { id: string; email: string; name: string }; token: string }> {
+    const response = await this.client.post<{ user: { id: string; email: string; name: string }; token: string }>('/auth/register', {
+      name,
+      email,
+      password,
+    });
+    return response.data;
+  }
+
   async verifyUser(): Promise<{ valid: boolean; userId?: string; error?: string; message: string }> {
     try {
       const response = await this.client.get<{ valid: boolean; userId: string; message: string }>('/auth/verify');

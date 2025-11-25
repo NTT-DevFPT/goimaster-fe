@@ -137,7 +137,7 @@ export const GroupDetail: React.FC = () => {
       {/* Create Lesson Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-5xl shadow-xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Add New Lesson</h2>
             {creationSuccess && (
               <div className="mb-5 p-4 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">
@@ -187,10 +187,25 @@ export const GroupDetail: React.FC = () => {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Import Words (Excel)</label>
-                <ImportExcel onImport={(data) => setImportedData(data)} />
-                {importedData.length > 0 && (
-                  <div className="mt-4 border border-gray-200 rounded-2xl overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Import Words (Excel)</label>
+                  {importedData.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImportedData([]);
+                        setTimeout(() => fileInputRef.current?.click(), 0);
+                      }}
+                      className="text-sm font-medium text-brand-600 hover:text-brand-700"
+                    >
+                      Import again
+                    </button>
+                  )}
+                </div>
+                {importedData.length === 0 ? (
+                  <ImportExcel onImport={(data) => setImportedData(data)} />
+                ) : (
+                  <div className="border border-gray-200 rounded-2xl overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
                       <div>
                         <p className="text-sm font-semibold text-gray-800">
@@ -198,15 +213,24 @@ export const GroupDetail: React.FC = () => {
                         </p>
                         <p className="text-xs text-gray-500">Double-check before creating the lesson</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleClearImportedWords}
-                        className="text-xs font-medium text-gray-500 hover:text-gray-700"
-                      >
-                        Clear all
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleClearImportedWords}
+                          className="text-xs font-medium text-gray-500 hover:text-gray-700"
+                        >
+                          Clear all
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                        >
+                          Import again
+                        </button>
+                      </div>
                     </div>
-                    <div className="max-h-64 overflow-y-auto bg-white">
+                    <div className="max-h-96 overflow-y-auto bg-white">
                       <table className="min-w-full text-sm">
                         <thead className="sticky top-0 bg-white shadow-sm">
                           <tr className="text-left text-gray-500 uppercase text-xs tracking-wide">
@@ -248,7 +272,7 @@ export const GroupDetail: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="sticky bottom-0 bg-white pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
                 <button
                   type="button"
                   onClick={() => {

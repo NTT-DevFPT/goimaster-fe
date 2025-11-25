@@ -84,6 +84,7 @@ export const MyVocabulary: React.FC = () => {
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
+                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">#</th>
                                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Kanji</th>
                                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Furigana</th>
                                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Hán Việt</th>
@@ -105,11 +106,12 @@ export const MyVocabulary: React.FC = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredWords.map((word) => (
+                                filteredWords.map((word, index) => (
                                     <tr key={word.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 font-jp text-2xl text-gray-900">{word.kanji}</td>
+                                        <td className="px-4 py-4 text-sm text-gray-400">{index + 1}</td>
+                                        <td className="px-6 py-4 font-jp text-2xl text-gray-900">{word.kanji || '—'}</td>
                                         <td className="px-6 py-4 font-jp text-gray-700">{word.furigana}</td>
-                                        <td className="px-6 py-4 text-gray-600">{word.hanViet}</td>
+                                        <td className="px-6 py-4 text-gray-600">{word.hanViet || '—'}</td>
                                         <td className="px-6 py-4 text-gray-700">{word.meaning}</td>
                                     </tr>
                                 ))
